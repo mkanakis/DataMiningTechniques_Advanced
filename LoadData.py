@@ -3,9 +3,72 @@ Created on Tue Apr 10 11:53:40 2018
 @author: Saba, Mick
 """
 
+#the preferred order for the DataFrame (just for inspection)
+cols = ['id',
+ 'datepart',
+ 'mood_',
+ 'activityGradient',
+ 'activityMeanPrevDays',
+ 'activityPrevDay',
+ 'appCat.builtinGradient',
+ 'appCat.builtinMeanPrevDays',
+ 'appCat.builtinPrevDay',
+ 'appCat.communicationGradient',
+ 'appCat.communicationMeanPrevDays',
+ 'appCat.communicationPrevDay',
+ 'appCat.entertainmentGradient',
+ 'appCat.entertainmentMeanPrevDays',
+ 'appCat.entertainmentPrevDay',
+ 'appCat.financeGradient',
+ 'appCat.financeMeanPrevDays',
+ 'appCat.financePrevDay',
+ 'appCat.gameGradient',
+ 'appCat.gameMeanPrevDays',
+ 'appCat.gamePrevDay',
+ 'appCat.officeGradient',
+ 'appCat.officeMeanPrevDays',
+ 'appCat.officePrevDay',
+ 'appCat.otherGradient',
+ 'appCat.otherMeanPrevDays',
+ 'appCat.otherPrevDay',
+ 'appCat.socialGradient',
+ 'appCat.socialMeanPrevDays',
+ 'appCat.socialPrevDay',
+ 'appCat.travelGradient',
+ 'appCat.travelMeanPrevDays',
+ 'appCat.travelPrevDay',
+ 'appCat.unknownGradient',
+ 'appCat.unknownMeanPrevDays',
+ 'appCat.unknownPrevDay',
+ 'appCat.utilitiesGradient',
+ 'appCat.utilitiesMeanPrevDays',
+ 'appCat.utilitiesPrevDay',
+ 'appCat.weatherGradient',
+ 'appCat.weatherMeanPrevDays',
+ 'appCat.weatherPrevDay',
+ 'circumplex.arousalGradient',
+ 'circumplex.arousalMeanPrevDays',
+ 'circumplex.arousalPrevDay',
+ 'circumplex.valenceGradient',
+ 'circumplex.valenceMeanPrevDays',
+ 'circumplex.valencePrevDay',
+ 'screenGradient',
+ 'screenMeanPrevDays',
+ 'screenPrevDay',
+ 'moodGradient',
+ 'moodMeanPrevDays',
+ 'moodPrevDay',
+ 'callGradient',
+ 'callSumPrevDays',
+ 'callPrevDay',
+ 'smsGradient',
+ 'smsSumPrevDays',
+ 'smsPrevDay']
+
 import pandas as pd
 import numpy as np
 from sklearn import preprocessing
+from collections import OrderedDict
 
 
 #normalizes the whole dataset
@@ -30,7 +93,7 @@ def normalizeperuser(df):
 
 def retdata():
     # load data into dataframe
-    df = pd.read_csv('ds.csv')
+    df = pd.read_csv('dataset_mood_smartphone.csv')
     df = df.drop('Unnamed: 0', 1)
 
     # add data part to dataframe
@@ -52,26 +115,57 @@ def retdata():
     ptcl1 = pt[np.isfinite(pt.mood)]  # 1268 rows
     ptcl2 = ptcl1[np.isfinite(ptcl1['circumplex.valence'])]  # 1266 rows
     ptcl3 = ptcl2[np.isfinite(ptcl2['circumplex.arousal'])]  # 1266 rows
-    #add previous day's mood
+    
+    new_feature_list = ['id', 'datepart', 'mood_']
     for feature_name in ptcl3.columns:
-        if feature_name not in ['id','datepart']:
-            ptcl3[str(feature_name)+'PrevDay'] = ptcl3[feature_name].shift(1)
-            ptcl3[str(feature_name)+'MeanPrevDays'] = ptcl3[str(feature_name)+'PrevDay'].rolling(5).mean()
-            ptcl3[str(feature_name)+'Gradient'] = np.gradient(ptcl3[str(feature_name)+'PrevDay'].rolling(center=False,window=5).mean())
+        if feature_name not in ['id', 'datepart', 'sms', 'call']:
+            new_feature_list.append((feature_name + 'PrevDay'))
+            new_feature_list.append((feature_name + 'MeanPrevDays'))
+            new_feature_list.append((feature_name + 'Gradient'))
+        elif feature_name not in ['id', 'datepart']:
+            new_feature_list.append((feature_name + 'PrevDay'))
+            new_feature_list.append((feature_name + 'SumPrevDays'))
+            new_feature_list.append((feature_name + 'Gradient'))
+    
+    the_df = pd.DataFrame(np.asarray([new_feature_list]))
+    the_df.columns = the_df.loc[0,:]
+    the_df = the_df.drop(0)
+    
+    #add previous day's mood
 
-    ptcl3['moodprevday'] = ptcl3['mood'].shift(1)
-    #add mean of the last n days mood mean
-    ptcl3['moodmeanprevdays'] = ptcl3['moodprevday'].rolling(5).mean()
-    ptcl3['Gradient'] = np.gradient(ptcl3['moodprevday'].rolling(center=False,window=5).mean())
-    # replace null with 0
-    cleandata = ptcl3.fillna(0)
+    id_set = list(OrderedDict.fromkeys(ptcl3['id']))
+    for person in id_set:
+        persondf = ptcl3[ptcl3['id'] == person]
+        for feature_name in persondf.columns:
+            if feature_name == 'mood':
+                persondf['mood_'] = ptcl3['mood'] #all original feature names will be removed, hence the new name
+            if feature_name not in ['id','datepart', 'call', 'sms']:
+                persondf[str(feature_name)+'PrevDay'] = persondf[feature_name].shift(1)
+                persondf[str(feature_name)+'PrevDay'] = persondf[str(feature_name)+'PrevDay'].fillna(0)
+                persondf[str(feature_name)+'MeanPrevDays'] = persondf[str(feature_name)+'PrevDay'].rolling(5).mean()
+                persondf[str(feature_name)+'Gradient'] = np.gradient(persondf[str(feature_name)+'PrevDay'].rolling(5).mean())
+                persondf = persondf.drop(feature_name, 1)
+            elif feature_name not in ['id', 'datepart']: #looking at the sum instead of the mean of the previous days for sms and call
+                persondf[str(feature_name)+'PrevDay'] = persondf[feature_name].shift(1)
+                persondf[str(feature_name)+'PrevDay'] = persondf[str(feature_name)+'PrevDay'].fillna(0)
+                persondf[str(feature_name)+'SumPrevDays'] = persondf[str(feature_name)+'PrevDay'].rolling(5).sum()
+                persondf[str(feature_name)+'Gradient'] = np.gradient(persondf[str(feature_name)+'PrevDay'].rolling(5).mean())
+                persondf = persondf.drop(feature_name, 1)                
+                
+        persondf = persondf[persondf['activityGradient'].notnull()] #arbritrary feature to remove the first 6 days
+        the_df = the_df.append(persondf)
+    
+    # replace null with 0 and reindex
+    cleandata = the_df[cols].fillna(0)
+    cleandata.index = range(len(cleandata.values))
+    
     #clean up
     del ptcl1, ptcl2, ptcl3, pt, pt1, pt2, df, df2, means
     #get normalized datasets
     normalizedwholeds = normalize(cleandata)
     normalizedperuser = normalizeperuser(cleandata)    
     
-    return normalizedwholeds,normalizedperuser
+    return normalizedwholeds,normalizedperuser, cleandata
 
 
-dsNormalizedWhole, dsNormalizedPerUser = retdata()
+dsNormalizedWhole, dsNormalizedPerUser, dsNotNormalized = retdata()

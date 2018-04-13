@@ -10,6 +10,11 @@ from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import GridSearchCV
 from xgboost import XGBRegressor
+from sklearn.model_selection import train_test_split as tts
+
+x = dsNotNormalized[dsNotNormalized.columns[3:]]
+y = dsNotNormalized['mood_']
+x_train, x_test, y_train, y_test = tts(x, y, test_size = 0.3)
 
 #hyperparameter selection
 tree_ = DecisionTreeRegressor()

@@ -201,20 +201,20 @@ X_train, X_test, y_train, y_test = train_test_split(X.values, Y.values, test_siz
 
 y_pred = model.predict(X_test)
 predictions = [round(value) for value in y_pred]
-accuracy = accuracy_score(y_test, predictions)
-print("Accuracy: %.2f%%" % (accuracy * 100.0))
-# Fit model using each importance as a threshold
-thresholds = np.sort(model.feature_importances_)
-for thresh in thresholds:
-	# select features using threshold
-	selection = SelectFromModel(model, threshold=thresh, prefit=True)
-	select_X_train = selection.transform(X_train)
-	# train model
-	selection_model = XGBClassifier()
-	selection_model.fit(select_X_train, y_train)
-	# eval model
-	select_X_test = selection.transform(X_test)
-	y_pred = selection_model.predict(select_X_test)
-	predictions = [round(value) for value in y_pred]
-	accuracy = accuracy_score(y_test, predictions)
-	print("Thresh=%.3f, n=%d, Accuracy: %.2f%%" % (thresh, select_X_train.shape[1], accuracy*100.0))
+#accuracy = accuracy_score(y_test, predictions)
+#print("Accuracy: %.2f%%" % (accuracy * 100.0))
+## Fit model using each importance as a threshold
+#thresholds = np.sort(model.feature_importances_)
+#for thresh in thresholds:
+#	# select features using threshold
+#	selection = SelectFromModel(model, threshold=thresh, prefit=True)
+#	select_X_train = selection.transform(X_train)
+#	# train model
+#	selection_model = XGBClassifier()
+#	selection_model.fit(select_X_train, y_train)
+#	# eval model
+#	select_X_test = selection.transform(X_test)
+#	y_pred = selection_model.predict(select_X_test)
+#	predictions = [round(value) for value in y_pred]
+#	accuracy = accuracy_score(y_test, predictions)
+#	print("Thresh=%.3f, n=%d, Accuracy: %.2f%%" % (thresh, select_X_train.shape[1], accuracy*100.0))

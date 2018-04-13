@@ -102,6 +102,7 @@ def normalizeperuser(df):
 
 def retdata():
     # load data into dataframe
+    window_size=7
     df = pd.read_csv('ds.csv')
     df = df.drop('Unnamed: 0', 1)
 
@@ -154,14 +155,14 @@ def retdata():
             if feature_name not in ['id','datepart', 'call', 'sms','weekday']:
                 persondf[str(feature_name)+'PrevDay'] = persondf[feature_name].shift(1)
                 persondf[str(feature_name)+'PrevDay'] = persondf[str(feature_name)+'PrevDay'].fillna(0)
-                persondf[str(feature_name)+'MeanPrevDays'] = persondf[str(feature_name)+'PrevDay'].rolling(5).mean()
-                persondf[str(feature_name)+'Gradient'] = np.gradient(persondf[str(feature_name)+'PrevDay'].rolling(5).mean())
+                persondf[str(feature_name)+'MeanPrevDays'] = persondf[str(feature_name)+'PrevDay'].rolling(window_size).mean()
+                persondf[str(feature_name)+'Gradient'] = np.gradient(persondf[str(feature_name)+'PrevDay'].rolling(window_size).mean())
                 persondf = persondf.drop(feature_name, 1)
             elif feature_name not in ['id', 'datepart','weekday']: #looking at the sum instead of the mean of the previous days for sms and call
                 persondf[str(feature_name)+'PrevDay'] = persondf[feature_name].shift(1)
                 persondf[str(feature_name)+'PrevDay'] = persondf[str(feature_name)+'PrevDay'].fillna(0)
-                persondf[str(feature_name)+'SumPrevDays'] = persondf[str(feature_name)+'PrevDay'].rolling(5).sum()
-                persondf[str(feature_name)+'Gradient'] = np.gradient(persondf[str(feature_name)+'PrevDay'].rolling(5).mean())
+                persondf[str(feature_name)+'SumPrevDays'] = persondf[str(feature_name)+'PrevDay'].rolling(window_size).sum()
+                persondf[str(feature_name)+'Gradient'] = np.gradient(persondf[str(feature_name)+'PrevDay'].rolling(window_size).mean())
                 persondf = persondf.drop(feature_name, 1)                
                 
         persondf = persondf[persondf['activityGradient'].notnull()] #arbritrary feature to remove the first 6 days
@@ -201,6 +202,10 @@ X_train, X_test, y_train, y_test = train_test_split(X.values, Y.values, test_siz
 
 y_pred = model.predict(X_test)
 predictions = [round(value) for value in y_pred]
+from sklearn.metrics import mean_squared_error
+import math
+testScore=math.sqrt(mean_squared_error(y_test.values,y_pred))
+print(testScore)
 #accuracy = accuracy_score(y_test, predictions)
 #print("Accuracy: %.2f%%" % (accuracy * 100.0))
 ## Fit model using each importance as a threshold

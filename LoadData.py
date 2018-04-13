@@ -151,7 +151,7 @@ def retdata():
         persondf = ptcl3[ptcl3['id'] == person]
         for feature_name in persondf.columns:
             if feature_name == 'mood':
-                persondf['mood_'] = ptcl3['mood'] #all original feature names will be removed, hence the new name
+                persondf['mood_'] = persondf['mood'] #all original feature names will be removed, hence the new name
             if feature_name not in ['id','datepart', 'call', 'sms','weekday']:
                 persondf[str(feature_name)+'PrevDay'] = persondf[feature_name].shift(1)
                 persondf[str(feature_name)+'PrevDay'] = persondf[str(feature_name)+'PrevDay'].fillna(0)

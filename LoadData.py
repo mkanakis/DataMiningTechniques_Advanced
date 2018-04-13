@@ -200,6 +200,10 @@ pyplot.show()
 X_train, X_test, y_train, y_test = train_test_split(X.values, Y.values, test_size=0.2, random_state=7)
 #params={'eta':0.1,'seed':0,'subsample':0.8,'colsample_bytree':0.8,'objective':'reg:linear','max_depth':3,'min_child_weight':1}
 
+#redefine the model here and train it on the training set
+model = XGBRegressor()
+model.fit(X_train, Y_train)
+
 y_pred = model.predict(X_test)
 predictions = [round(value) for value in y_pred]
 from sklearn.metrics import mean_squared_error

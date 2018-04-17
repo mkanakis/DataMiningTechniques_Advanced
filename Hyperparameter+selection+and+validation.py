@@ -14,9 +14,14 @@ from sklearn.model_selection import train_test_split as tts
 from scipy.stats import ttest_ind
 
 
-x = dsNotNormalized[dsNotNormalized.columns[3:]]
-y = dsNotNormalized['mood_']
-x_train, x_test, y_train, y_test = tts(x, y, test_size = 0.3)
+x = dsNormalizedWhole[dsNormalizedWhole.columns[3:]]
+x['moodPrevDay_'] = dsNotNormalized[['moodPrevDay']]
+y = dsNormalizedWhole['mood_']
+x_train, x_test, y_train, y_test = tts(x, y, test_size = 0.4)
+x_base = x_test['moodPrevDay_']
+x_test = x_test.drop('moodPrevDay_', 1)
+x_train = x_train.drop('moodPrevDay_', 1)
+print(x_train.shape)
 
 #hyperparameter selection
 tree_ = DecisionTreeRegressor()

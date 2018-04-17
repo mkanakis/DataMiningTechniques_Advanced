@@ -6,8 +6,8 @@ Created on Tue Apr 10 11:53:40 2018
 #the preferred order for the DataFrame (just for inspection)
 cols = ['id',
  'datepart',
- 'weekday',
  'mood_',
+ 'weekday',
  'activityGradient',
  'activityMeanPrevDays',
  'activityPrevDay',

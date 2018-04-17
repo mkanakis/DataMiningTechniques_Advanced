@@ -186,20 +186,27 @@ dsNormalizedWhole, dsNormalizedPerUser, dsNotNormalized = retdata()
 
 
 
+from keras.optimizers import RMSprop
+
+rms = RMSprop(lr=0.001, rho=0.9, epsilon=None, decay=0.0)
+
 def create_dataset(dataset, look_back=1):
 	dataX, dataY = [], []
 	for i in range(len(dataset)-look_back-1):
 		a = dataset[i:(i+look_back), 0]
 		dataX.append(a)
 		dataY.append(dataset[i + look_back, 0])
-	return numpy.array(dataX), numpy.array(dataY)
+	return np.array(dataX), np.array(dataY)
 
 id_set = list(OrderedDict.fromkeys(dsNotNormalized['id']))
-result = {'base': 0, 'model': 0, 'equal': 0}
+mses_m = list()
+mses_b = list()
+mses_t = list()
 for person in id_set:
     # fix random seed for reproducibility
-    numpy.random.seed(7)
-    # load the dataset
+    np.random.seed(7)
+    
+    # create dataset and baseline set
     dataframe = dsNotNormalized[dsNotNormalized['id'] == person][['mood_']]
     dataframe.index = range(len(dataframe.values))
     baseline_set = pd.DataFrame([['mood', 'mood_f']])
@@ -211,71 +218,76 @@ for person in id_set:
     baseline_set.index = range(len(baseline_set.values))
     dataset = dataframe.values
     dataset = dataset.astype('float32')
+    
     # normalize the dataset
     scaler = MinMaxScaler(feature_range=(0, 1))
     dataset = scaler.fit_transform(dataset)
+    
     # split into train and test sets
     train_size = int(len(dataset) * 0.5)
     test_size = len(dataset) - train_size
     train, test = dataset[0:train_size,:], dataset[train_size:len(dataset),:]
+    
     # reshape into X=t and Y=t+1
-    look_back = 3
+    look_back = 5
     trainX, trainY = create_dataset(train, look_back)
     testX, testY = create_dataset(test, look_back)
+    
     # reshape input to be [samples, time steps, features]
-    trainX = numpy.reshape(trainX, (trainX.shape[0], 1, trainX.shape[1]))
-    testX = numpy.reshape(testX, (testX.shape[0], 1, testX.shape[1]))
+    trainX = np.reshape(trainX, (trainX.shape[0], 1, trainX.shape[1]))
+    testX = np.reshape(testX, (testX.shape[0], 1, testX.shape[1]))
+    
     # create and fit the LSTM network
     model = Sequential()
-    model.add(LSTM(5, input_shape=(1, look_back)))
+    model.add(LSTM(4, input_shape=(1, look_back)))
     model.add(Dense(1))
-    model.compile(loss='mean_squared_error', optimizer='adam')
+    model.compile(loss='mean_squared_error', optimizer=rms)
     model.fit(trainX, trainY, epochs=100, batch_size=1, verbose=0)
+    
     # make predictions
     trainPredict = model.predict(trainX)
     testPredict = model.predict(testX)
+    
     # invert predictions
     trainPredict = scaler.inverse_transform(trainPredict)
     trainY = scaler.inverse_transform([trainY])
     testPredict = scaler.inverse_transform(testPredict)
     testY = scaler.inverse_transform([testY])
-    # calculate root mean squared error
+    
+    # calculate root mean squared error of the training testing and baseline
     print('\n\n\t\t' + person + ':')
     errors_t = trainY[0] - trainPredict[:,0]
     squared_errors_t = errors_t*errors_t
     print('\nTrain Score:')
     print('\tMSE:', round(squared_errors_t.mean(), 4), 'SD', round(squared_errors_t.std(), 4))
     print('\tRMSE:', round(math.sqrt(squared_errors_t.mean()), 4), 'SD:', round(math.sqrt(squared_errors_t.std()), 4))
+    mses_t.append(round(squared_errors_t.mean(), 4))
     
     errors = testY[0] - testPredict[:,0]
     squared_errors = errors*errors
     print('\nTest Score:')
     print('\tMSE:', round(squared_errors.mean(), 4), 'SD', round(squared_errors.std(), 4))
     print('\tRMSE:', round(math.sqrt(squared_errors.mean()), 4), 'SD:', round(math.sqrt(squared_errors.std()), 4))
-
+    mses_m.append(round(squared_errors.mean(), 4))
+    
     errors_b = baseline_set['mood'][train_size:len(dataset)] - baseline_set['mood_f'][train_size:len(dataset)]
     squared_errors_b = errors_b*errors_b
     print('\nBaseline Score:')
     print('\tMSE:', round(squared_errors_b.mean(), 4), 'SD', round(squared_errors_b.std(), 4))
     print('\tRMSE:', round(math.sqrt(squared_errors_b.mean()), 4), 'SD:', round(math.sqrt(squared_errors_b.std()), 4))
+    mses_b.append(round(squared_errors_b.mean(), 4))
     
+    #statistical test to see if the model beats the baseline
     t, p = ttest_ind(squared_errors_b, squared_errors, equal_var = False)
     print('\n\t\tT-test ||t:', t.round(4), '\tp:', p.round(4))
-    if p < .2:
-        if squared_errors_b.mean() < squared_errors.mean():
-            result['base'] += 1
-        else:
-            result['model'] += 1
-    else:
-        result['equal'] += 1
             
     # shift train predictions for plotting
-    trainPredictPlot = numpy.empty_like(dataset)
-    trainPredictPlot[:, :] = numpy.nan
+    trainPredictPlot = np.empty_like(dataset)
+    trainPredictPlot[:, :] = np.nan
     trainPredictPlot[look_back:len(trainPredict)+look_back, :] = trainPredict
     # shift test predictions for plotting
-    testPredictPlot = numpy.empty_like(dataset)
-    testPredictPlot[:, :] = numpy.nan
+    testPredictPlot = np.empty_like(dataset)
+    testPredictPlot[:, :] = np.nan
     testPredictPlot[len(trainPredict)+(look_back*2)+1:len(dataset)-1, :] = testPredict
     # plot baseline and predictions
     plt.plot(scaler.inverse_transform(dataset))
@@ -283,5 +295,9 @@ for person in id_set:
     plt.plot(testPredictPlot)
     plt.show()
     
-print(result)
-
+t, p=ttest_ind(mses_b, mses_m, equal_var = False)
+print('\nT-test on mses of the models (model vs. baseline)||t:', t,'\tp:', p)
+print('\tMean MSE baseline:', round(sum(mses_b)/len(mses_b), 3), '\tMean MSE model:', round(sum(mses_m)/len(mses_m),3))
+t, p=ttest_ind(mses_t, mses_m, equal_var = False)
+print('\nT-test on mses of the models (training vs testing)||t:', t, '\tp:', p)
+print('\tMean MSE training:', round(sum(mses_t)/len(mses_t), 3), '\tMean MSE testing:', round(sum(mses_m)/len(mses_m),3))

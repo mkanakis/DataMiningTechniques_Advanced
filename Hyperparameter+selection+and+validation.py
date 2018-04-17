@@ -11,6 +11,8 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import GridSearchCV
 from xgboost import XGBRegressor
 from sklearn.model_selection import train_test_split as tts
+from scipy.stats import ttest_ind
+
 
 x = dsNotNormalized[dsNotNormalized.columns[3:]]
 y = dsNotNormalized['mood_']
@@ -74,13 +76,13 @@ for modeldata in best_models:
         xgb_predict = xgbmodel.predict(x_test)
         predictionlist.append((model, xgb_predict))
 
-base_prediction = x_test['moodPrevDay']
-predictionlist.append(('baseline', base_prediction)) 
-
 lin_reg = LinearRegression()
 lin_reg.fit(x_train, y_train)
 lin_prediction = lin_reg.predict(x_test)
-predictionlist.append(('linear', lin_prediction))
+predictionlist.append(('linear', lin_prediction))        
+        
+base_prediction = x_test['moodPrevDay']
+predictionlist.append(('baseline', base_prediction)) 
 
 for predictor, prediction in predictionlist:
     
@@ -89,4 +91,11 @@ for predictor, prediction in predictionlist:
     print('\n\t\t' + predictor.upper() + '\n')
     print('\tMSE:', squared_errors.mean(), 'SD', squared_errors.std())
     print('\tRMSE:', math.sqrt(squared_errors.mean()), 'SD:', math.sqrt(squared_errors.std()))
+    
+    errors_b = y_test.subtract(base_prediction)
+    squared_errors_b = errors_b*errors_b
+    
+    if predictor not in ['baseline']:
+        t, p = ttest_ind(squared_errors,squared_errors_b, equal_var=False)
+        print('\n\tT-test on mses of models (model vs. baseline)||t:', t, '\tp:, p)
 

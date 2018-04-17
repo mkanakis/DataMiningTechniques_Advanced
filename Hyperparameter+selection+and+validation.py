@@ -97,5 +97,5 @@ for predictor, prediction in predictionlist:
     
     if predictor not in ['baseline']:
         t, p = ttest_ind(squared_errors,squared_errors_b, equal_var=False)
-        print('\n\tT-test on mses of models (model vs. baseline)||t:', t, '\tp:, p)
+        print('\n\tT-test on mses of models (model vs. baseline)||t:', t, '\tp:', p)
 

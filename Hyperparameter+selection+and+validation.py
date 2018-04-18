@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Apr 18 14:40:14 2018
+
+@author: sabaa
+"""
+
 
 # coding: utf-8
 
@@ -12,12 +19,44 @@ from sklearn.model_selection import GridSearchCV
 from xgboost import XGBRegressor
 from sklearn.model_selection import train_test_split as tts
 from scipy.stats import ttest_ind
+import numpy as np
+from bayes_opt import BayesianOptimization
+from sklearn.metrics import r2_score
+from sklearn.decomposition import PCA, FastICA, TruncatedSVD
+from sklearn.random_projection import GaussianRandomProjection
+from sklearn.random_projection import SparseRandomProjection
+import pandas as pd
+
 
 
 x = dsNormalizedWhole[dsNormalizedWhole.columns[3:]]
-x['moodPrevDay_'] = dsNotNormalized[['moodPrevDay']]
 y = dsNormalizedWhole['mood_']
-x_train, x_test, y_train, y_test = tts(x, y, test_size = 0.4)
+pca = PCA(n_components=5)
+ica = FastICA(n_components=5, max_iter=1000)
+tsvd = TruncatedSVD(n_components=5)
+gp = GaussianRandomProjection(n_components=5)
+sp = SparseRandomProjection(n_components=5, dense_output=True)
+
+x_pca = pd.DataFrame(pca.fit_transform(x))
+x_ica = pd.DataFrame(ica.fit_transform(x))
+x_tsvd = pd.DataFrame(tsvd.fit_transform(x))
+x_gp = pd.DataFrame(gp.fit_transform(x))
+x_sp = pd.DataFrame(sp.fit_transform(x))
+x_pca.columns = ["pca_{}".format(i) for i in x_pca.columns]
+x_ica.columns = ["ica_{}".format(i) for i in x_ica.columns]
+x_tsvd.columns = ["tsvd_{}".format(i) for i in x_tsvd.columns]
+x_gp.columns = ["gp_{}".format(i) for i in x_gp.columns]
+x_sp.columns = ["sp_{}".format(i) for i in x_sp.columns]
+X = pd.concat((x, x_pca), axis=1)
+X = pd.concat((x, x_ica), axis=1)
+X = pd.concat((x, x_tsvd), axis=1)
+X = pd.concat((x, x_gp), axis=1)
+X = pd.concat((x, x_sp), axis=1)
+X['moodPrevDay_'] = dsNotNormalized[['moodPrevDay']]
+
+x_train, x_test, y_train, y_test = tts(X, y, test_size = 0.2)
+
+#x_train, x_test, y_train, y_test = tts(x, y, test_size = 0.4)
 x_base = x_test['moodPrevDay_']
 x_test = x_test.drop('moodPrevDay_', 1)
 x_train = x_train.drop('moodPrevDay_', 1)
@@ -30,10 +69,11 @@ xgb = XGBRegressor()
 
 tuned_parameters_tree = [{'min_samples_leaf': range(35,46,5),'max_depth': range(45,66,5), 'max_features': range(50, 56, 1)}]
 tuned_parameters_forest = [{'n_estimators': range(20,31,5), 'min_samples_leaf': range(10,31,5),'max_depth': range(10,21,5), 'max_features': range(45,52, 2)}]
-tuned_parameters_xgb = [{'max_depth': range(1, 5, 2), 'n_estimators': range(70, 86, 5), 'learning_rate': [.125, .15, .175]}]
+tuned_parameters_xgb = [{'max_depth': range(2, 15, 2), 'n_estimators': [300], 'learning_rate': np.arange(0.01,0.16,0.02).tolist(),'colsample_bytree':np.arange(0.4,0.91,0.15).tolist(),'subsample':np.arange(0.3,0.8,0.1).tolist()}]
 
 
-models = [(tuned_parameters_tree, tree_, 'tree'), (tuned_parameters_forest, forest_, 'forest'), (tuned_parameters_xgb, xgb, 'xgb')]
+#models = [(tuned_parameters_tree, tree_, 'tree'), (tuned_parameters_forest, forest_, 'forest'), (tuned_parameters_xgb, xgb, 'xgb')]
+models = [(tuned_parameters_forest, forest_, 'forest'), (tuned_parameters_xgb, xgb, 'xgb')]
 
 best_models = list()
 
@@ -103,4 +143,3 @@ for predictor, prediction in predictionlist:
     if predictor not in ['baseline']:
         t, p = ttest_ind(squared_errors,squared_errors_b, equal_var=False)
         print('\n\tT-test on mses of models (model vs. baseline)||t:', t, '\tp:', p)
-

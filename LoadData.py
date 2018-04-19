@@ -10,61 +10,61 @@ cols = ['id',
  'weekday',
  'activityGradient',
  'activityMeanPrevDays',
- 'activityPrevDay',
+ #'activityPrevDay',
  'appCat.builtinGradient',
  'appCat.builtinMeanPrevDays',
- 'appCat.builtinPrevDay',
+ #'appCat.builtinPrevDay',
  'appCat.communicationGradient',
  'appCat.communicationMeanPrevDays',
- 'appCat.communicationPrevDay',
+ #'appCat.communicationPrevDay',
  'appCat.entertainmentGradient',
  'appCat.entertainmentMeanPrevDays',
- 'appCat.entertainmentPrevDay',
+ #'appCat.entertainmentPrevDay',
  'appCat.financeGradient',
  'appCat.financeMeanPrevDays',
- 'appCat.financePrevDay',
+ #'appCat.financePrevDay',
  'appCat.gameGradient',
  'appCat.gameMeanPrevDays',
- 'appCat.gamePrevDay',
+ #'appCat.gamePrevDay',
  'appCat.officeGradient',
  'appCat.officeMeanPrevDays',
- 'appCat.officePrevDay',
+ #'appCat.officePrevDay',
  'appCat.otherGradient',
  'appCat.otherMeanPrevDays',
- 'appCat.otherPrevDay',
+ #'appCat.otherPrevDay',
  'appCat.socialGradient',
  'appCat.socialMeanPrevDays',
- 'appCat.socialPrevDay',
+ #'appCat.socialPrevDay',
  'appCat.travelGradient',
  'appCat.travelMeanPrevDays',
- 'appCat.travelPrevDay',
+ #'appCat.travelPrevDay',
  'appCat.unknownGradient',
  'appCat.unknownMeanPrevDays',
- 'appCat.unknownPrevDay',
+ #'appCat.unknownPrevDay',
  'appCat.utilitiesGradient',
  'appCat.utilitiesMeanPrevDays',
- 'appCat.utilitiesPrevDay',
+ #'appCat.utilitiesPrevDay',
  'appCat.weatherGradient',
  'appCat.weatherMeanPrevDays',
- 'appCat.weatherPrevDay',
+ #'appCat.weatherPrevDay',
  'circumplex.arousalGradient',
  'circumplex.arousalMeanPrevDays',
- 'circumplex.arousalPrevDay',
+ #'circumplex.arousalPrevDay',
  'circumplex.valenceGradient',
  'circumplex.valenceMeanPrevDays',
- 'circumplex.valencePrevDay',
+ #'circumplex.valencePrevDay',
  'screenGradient',
  'screenMeanPrevDays',
- 'screenPrevDay',
+ #'screenPrevDay',
  'moodGradient',
  'moodMeanPrevDays',
- 'moodPrevDay',
+ #'moodPrevDay',
  'callGradient',
  'callSumPrevDays',
- 'callPrevDay',
+ #'callPrevDay',
  'smsGradient',
- 'smsSumPrevDays',
- 'smsPrevDay']
+ 'smsSumPrevDays']
+ #'smsPrevDay']
 
 import pandas as pd
 import numpy as np
@@ -128,21 +128,25 @@ def retdata():
     ptcl3['weekday'] = pd.to_datetime(ptcl3['datepart']).dt.weekday_name
     le = sklearn.preprocessing.LabelEncoder()
     ptcl3['weekday'] = le.fit_transform(ptcl3['weekday'])
+    ptcl3 = ptcl3.sort_values(by=['id','datepart'])
     
     new_feature_list = ['id', 'datepart','weekday', 'mood_']
     for feature_name in ptcl3.columns:
         if feature_name not in ['id', 'datepart', 'sms', 'call','weekday']:
-            new_feature_list.append((feature_name + 'PrevDay'))
+            #new_feature_list.append((feature_name + 'PrevDay'))
             new_feature_list.append((feature_name + 'MeanPrevDays'))
             new_feature_list.append((feature_name + 'Gradient'))
+            new_feature_list.append((feature_name + 'Log'))
         elif feature_name not in ['id', 'datepart','weekday']:
-            new_feature_list.append((feature_name + 'PrevDay'))
+            #new_feature_list.append((feature_name + 'PrevDay'))
             new_feature_list.append((feature_name + 'SumPrevDays'))
             new_feature_list.append((feature_name + 'Gradient'))
     
     the_df = pd.DataFrame(np.asarray([new_feature_list]))
     the_df.columns = the_df.loc[0,:]
     the_df = the_df.drop(0)
+    the_df = the_df.fillna(0)
+    ptcl3 = ptcl3.fillna(0)
     
     #add previous day's mood
 
@@ -153,16 +157,18 @@ def retdata():
             if feature_name == 'mood':
                 persondf['mood_'] = persondf['mood'] #all original feature names will be removed, hence the new name
             if feature_name not in ['id','datepart', 'call', 'sms','weekday']:
-                persondf[str(feature_name)+'PrevDay'] = persondf[feature_name].shift(1)
-                persondf[str(feature_name)+'PrevDay'] = persondf[str(feature_name)+'PrevDay'].fillna(0)
-                persondf[str(feature_name)+'MeanPrevDays'] = persondf[str(feature_name)+'PrevDay'].rolling(window_size).mean()
-                persondf[str(feature_name)+'Gradient'] = np.gradient(persondf[str(feature_name)+'PrevDay'].rolling(window_size).mean())
+                #persondf[str(feature_name)+'PrevDay'] = persondf[feature_name].shift(1)
+                #persondf[str(feature_name)+'PrevDay'] = persondf[str(feature_name)+'PrevDay'].fillna(0)
+                persondf[str(feature_name)+'MeanPrevDays'] = persondf[str(feature_name)].rolling(window_size).mean()
+                persondf[str(feature_name)+'Gradient'] = np.gradient(persondf[str(feature_name)].rolling(window_size).mean())
+                persondf[str(feature_name)+'Log'] = np.log(persondf[str(feature_name)])
+                persondf[str(feature_name)+'Log'][np.isneginf(persondf[str(feature_name)+'Log'])] = 0
                 persondf = persondf.drop(feature_name, 1)
             elif feature_name not in ['id', 'datepart','weekday']: #looking at the sum instead of the mean of the previous days for sms and call
-                persondf[str(feature_name)+'PrevDay'] = persondf[feature_name].shift(1)
-                persondf[str(feature_name)+'PrevDay'] = persondf[str(feature_name)+'PrevDay'].fillna(0)
-                persondf[str(feature_name)+'SumPrevDays'] = persondf[str(feature_name)+'PrevDay'].rolling(window_size).sum()
-                persondf[str(feature_name)+'Gradient'] = np.gradient(persondf[str(feature_name)+'PrevDay'].rolling(window_size).mean())
+                #persondf[str(feature_name)+'PrevDay'] = persondf[feature_name].shift(1)
+                #persondf[str(feature_name)+'PrevDay'] = persondf[str(feature_name)+'PrevDay'].fillna(0)
+                persondf[str(feature_name)+'SumPrevDays'] = persondf[str(feature_name)].rolling(window_size).sum()
+                persondf[str(feature_name)+'Gradient'] = np.gradient(persondf[str(feature_name)].rolling(window_size).mean())
                 persondf = persondf.drop(feature_name, 1)                
                 
         persondf = persondf[persondf['activityGradient'].notnull()] #arbritrary feature to remove the first 6 days
@@ -202,13 +208,13 @@ X_train, X_test, y_train, y_test = train_test_split(X.values, Y.values, test_siz
 
 #redefine the model here and train it on the training set
 model = XGBRegressor()
-model.fit(X_train, Y_train)
+model.fit(X_train, y_train)
 
 y_pred = model.predict(X_test)
 predictions = [round(value) for value in y_pred]
 from sklearn.metrics import mean_squared_error
 import math
-testScore=math.sqrt(mean_squared_error(y_test.values,y_pred))
+testScore=math.sqrt(mean_squared_error(y_test,y_pred))
 print(testScore)
 #accuracy = accuracy_score(y_test, predictions)
 #print("Accuracy: %.2f%%" % (accuracy * 100.0))
@@ -227,3 +233,89 @@ print(testScore)
 #	predictions = [round(value) for value in y_pred]
 #	accuracy = accuracy_score(y_test, predictions)
 #	print("Thresh=%.3f, n=%d, Accuracy: %.2f%%" % (thresh, select_X_train.shape[1], accuracy*100.0))
+from sklearn.linear_model import LinearRegression
+import math
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import GridSearchCV
+from xgboost import XGBRegressor
+from sklearn.model_selection import train_test_split as tts
+
+x = dsNormalizedWhole[dsNormalizedWhole.columns[3:]]
+y = dsNormalizedWhole['mood_']
+x_train, x_test, y_train, y_test = tts(x, y, test_size = 0.2)
+
+#hyperparameter selection
+tree_ = DecisionTreeRegressor()
+forest_ = RandomForestRegressor()
+xgb = XGBRegressor()
+
+tuned_parameters_tree = [{'min_samples_leaf': range(35,46,5),'max_depth': range(45,66,5), 'max_features': range(50, 56, 1)}]
+tuned_parameters_forest = [{'n_estimators': range(20,31,5), 'min_samples_leaf': range(10,31,5),'max_depth': range(10,21,5), 'max_features': range(45,52, 2)}]
+params={'eta':0.1,'seed':0,'subsample':0.8,'colsample_bytree':0.8,'objective':'reg:linear','max_depth':3,'min_child_weight':1}
+tuned_parameters_xgb = [{'max_depth': range(3, 11, 1), 'n_estimators': 300, 'learning_rate': range(0.01,0.21,0.01),'colsample_bytree':range(0.4,0.91,0.1),'eta':range(0.05,0.31,0.01),'subsample':range(0.5,0.96,0.05),'eval_metric':'rmse'}]
+
+
+models = [(tuned_parameters_tree, tree_, 'tree'), (tuned_parameters_forest, forest_, 'forest'), (tuned_parameters_xgb, xgb, 'xgb')]
+
+best_models = list()
+
+for tuned_parameters, model, modelname in models: 
+    scores = ['neg_mean_squared_error']
+    for score in scores:
+        clf = GridSearchCV(model, tuned_parameters, cv=10, scoring=score)
+        clf.fit(x_train, y_train)
+       
+        print('----------------------------------------------------------------------')
+        print("Gridsearch for", modelname, "with", score, "as scoring method:")
+        print()
+        print("Best parameters set found on development set:")
+        print()
+        print(clf.best_params_, 'with score', clf.best_score_.round(3))
+        print()
+        print()
+        print("Grid scores on development set:")
+        print()
+        means = clf.cv_results_['mean_test_score']
+        stds = clf.cv_results_['std_test_score']
+        for mean, std, params in zip(means, stds, clf.cv_results_['params']):
+            print(mean.round(3), std.round(3), params)
+        print()
+        print()
+        best_models.append((clf.best_score_.round(3), modelname, score, clf.best_params_))
+
+
+predictionlist = list()
+for modeldata in best_models:
+    sme, model, error, params = modeldata
+    if model == 'tree':
+        treemodel = DecisionTreeRegressor(**params)
+        treemodel.fit(x_train, y_train)
+        tree_predict = treemodel.predict(x_test)
+        predictionlist.append((model, tree_predict))
+    if model == 'forest':
+        forestmodel = RandomForestRegressor(**params)
+        forestmodel.fit(x_train, y_train)
+        forest_predict = forestmodel.predict(x_test)
+        predictionlist.append((model, forest_predict))
+    if model == 'xgb':
+        xgbmodel = XGBRegressor(**params)
+        xgbmodel.fit(x_train,y_train)
+        xgb_predict = xgbmodel.predict(x_test)
+        predictionlist.append((model, xgb_predict))
+
+base_prediction = x_test['moodPrevDay']
+predictionlist.append(('baseline', base_prediction)) 
+
+lin_reg = LinearRegression()
+lin_reg.fit(x_train, y_train)
+lin_prediction = lin_reg.predict(x_test)
+predictionlist.append(('linear', lin_prediction))
+
+for predictor, prediction in predictionlist:
+    
+    errors = y_test.subtract(prediction)
+    squared_errors = errors*errors
+    print('\n\t\t' + predictor.upper() + '\n')
+    print('\tMSE:', squared_errors.mean(), 'SD', squared_errors.std())
+    print('\tRMSE:', math.sqrt(squared_errors.mean()), 'SD:', math.sqrt(squared_errors.std()))

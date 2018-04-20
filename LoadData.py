@@ -79,6 +79,12 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 from sklearn.feature_selection import SelectFromModel
 import sklearn
+from bayes_opt import BayesianOptimization
+from sklearn.metrics import r2_score
+from sklearn.decomposition import PCA, FastICA, TruncatedSVD
+from sklearn.random_projection import GaussianRandomProjection
+from sklearn.random_projection import SparseRandomProjection
+
 
 #normalizes the whole dataset
 def normalize(df):
@@ -153,6 +159,7 @@ def retdata():
     id_set = list(OrderedDict.fromkeys(ptcl3['id']))
     for person in id_set:
         persondf = ptcl3[ptcl3['id'] == person]
+
         for feature_name in persondf.columns:
             if feature_name == 'mood':
                 persondf['mood_'] = persondf['mood'] #all original feature names will be removed, hence the new name
@@ -172,7 +179,32 @@ def retdata():
                 persondf = persondf.drop(feature_name, 1)                
                 
         persondf = persondf[persondf['activityGradient'].notnull()] #arbritrary feature to remove the first 6 days
+        persondf = persondf.fillna(0)
+        
+        pca = PCA(n_components=5)
+        ica = FastICA(n_components=5, max_iter=1000)
+        tsvd = TruncatedSVD(n_components=5)
+        gp = GaussianRandomProjection(n_components=5)
+        sp = SparseRandomProjection(n_components=5, dense_output=True)
+        
+        x_pca = pd.DataFrame(pca.fit_transform(persondf.drop(['mood_','id','datepart','weekday'],axis=1)))
+        x_ica = pd.DataFrame(ica.fit_transform(persondf.drop(['mood_','id','datepart','weekday'],axis=1)))
+        x_tsvd = pd.DataFrame(tsvd.fit_transform(persondf.drop(['mood_','id','datepart','weekday'],axis=1)))
+        x_gp = pd.DataFrame(gp.fit_transform(persondf.drop(['mood_','id','datepart','weekday'],axis=1)))
+        x_sp = pd.DataFrame(sp.fit_transform(persondf.drop(['mood_','id','datepart','weekday'],axis=1)))
+        x_pca.columns = ["pca_{}".format(i) for i in x_pca.columns]
+        x_ica.columns = ["ica_{}".format(i) for i in x_ica.columns]
+        x_tsvd.columns = ["tsvd_{}".format(i) for i in x_tsvd.columns]
+        x_gp.columns = ["gp_{}".format(i) for i in x_gp.columns]
+        x_sp.columns = ["sp_{}".format(i) for i in x_sp.columns]
+        X = pd.concat((persondf, x_pca), axis=1)
+        X = pd.concat((persondf, x_ica), axis=1)
+        X = pd.concat((persondf, x_tsvd), axis=1)
+        X = pd.concat((persondf, x_gp), axis=1)
+        X = pd.concat((persondf, x_sp), axis=1)
+
         the_df = the_df.append(persondf)
+        the_df = the_df.fillna(0)
     
     # replace null with 0 and reindex
     cleandata = the_df[cols].fillna(0)

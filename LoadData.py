@@ -148,10 +148,10 @@ def retdata():
             new_feature_list.append((feature_name + 'SumPrevDays'))
             new_feature_list.append((feature_name + 'Gradient'))
     
-    the_df = pd.DataFrame(np.asarray([new_feature_list]))
-    the_df.columns = the_df.loc[0,:]
-    the_df = the_df.drop(0)
-    the_df = the_df.fillna(0)
+    the_df = pd.DataFrame()
+#    the_df.columns = the_df.loc[0,:]
+#    the_df = the_df.drop(0)
+#    the_df = the_df.fillna(0)
     ptcl3 = ptcl3.fillna(0)
     
     #add previous day's mood
@@ -182,37 +182,39 @@ def retdata():
         persondf = persondf.fillna(0)
         
         pca = PCA(n_components=5)
-        ica = FastICA(n_components=5, max_iter=1000)
         tsvd = TruncatedSVD(n_components=5)
         gp = GaussianRandomProjection(n_components=5)
         sp = SparseRandomProjection(n_components=5, dense_output=True)
         
         x_pca = pd.DataFrame(pca.fit_transform(persondf.drop(['mood_','id','datepart','weekday'],axis=1)))
-        x_ica = pd.DataFrame(ica.fit_transform(persondf.drop(['mood_','id','datepart','weekday'],axis=1)))
         x_tsvd = pd.DataFrame(tsvd.fit_transform(persondf.drop(['mood_','id','datepart','weekday'],axis=1)))
         x_gp = pd.DataFrame(gp.fit_transform(persondf.drop(['mood_','id','datepart','weekday'],axis=1)))
         x_sp = pd.DataFrame(sp.fit_transform(persondf.drop(['mood_','id','datepart','weekday'],axis=1)))
         x_pca.columns = ["pca_{}".format(i) for i in x_pca.columns]
-        x_ica.columns = ["ica_{}".format(i) for i in x_ica.columns]
         x_tsvd.columns = ["tsvd_{}".format(i) for i in x_tsvd.columns]
         x_gp.columns = ["gp_{}".format(i) for i in x_gp.columns]
         x_sp.columns = ["sp_{}".format(i) for i in x_sp.columns]
-        X = pd.concat((persondf, x_pca), axis=1)
-        X = pd.concat((persondf, x_ica), axis=1)
-        X = pd.concat((persondf, x_tsvd), axis=1)
-        X = pd.concat((persondf, x_gp), axis=1)
-        X = pd.concat((persondf, x_sp), axis=1)
+        x_pca = x_pca.reset_index()
+        x_tsvd = x_tsvd.reset_index()
+        x_gp = x_gp.reset_index()
+        x_sp = x_sp.reset_index()
+        persondf = persondf.reset_index()
+        persondf = pd.concat((persondf, x_pca), axis=1)
+        persondf = pd.concat((persondf, x_tsvd), axis=1)
+        persondf = pd.concat((persondf, x_gp), axis=1)
+        persondf = pd.concat((persondf, x_sp), axis=1)
 
         the_df = the_df.append(persondf)
         the_df = the_df.fillna(0)
     
     # replace null with 0 and reindex
-    cleandata = the_df[cols].fillna(0)
+    cleandata = the_df.fillna(0)
     cleandata.index = range(len(cleandata.values))
     
     #clean up
     del ptcl1, ptcl2, ptcl3, pt, pt1, pt2, df, df2, means
     #get normalized datasets
+    cleandata = cleandata.drop(cleandata.columns[[60,66,72,78]],axis=1)
     normalizedwholeds = normalize(cleandata)
     normalizedperuser = normalizeperuser(cleandata)    
     

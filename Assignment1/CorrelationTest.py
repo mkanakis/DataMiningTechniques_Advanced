@@ -1,4 +1,5 @@
 from src import LoadDatav2 as ld
+from src import LoadData as nld
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -47,15 +48,21 @@ def get_top_abs_correlations(df, n=5):
 
 
 # Retrieves data
-data = ld.retdata()
+# data = ld.retdata()
 # Pearsons correlation test
-corrmatrix = data.corr(method='pearson')
-
+# corrmatrix = data.corr(method='pearson')
+#
 # Plot using matplotlib or seaborn package
-# plot_corr(corrmatrix)
-plot_corr_seaborn(corrmatrix)
-
+# # plot_corr(corrmatrix)
+# plot_corr_seaborn(corrmatrix)
+#
 # Print correlation matrix, and order correlations with top_abs_correlations
-print(corrmatrix)
-print()
-print(get_top_abs_correlations(corrmatrix, 10))
+# print(corrmatrix)
+# print()
+# print(get_top_abs_correlations(corrmatrix, 10))
+
+
+# Data from updated LoadData python
+corrmatrix = nld.dsNotNormalized.corr(method='pearson')
+# plot_corr_seaborn(corrmatrix)
+print(get_top_abs_correlations(corrmatrix, 30))

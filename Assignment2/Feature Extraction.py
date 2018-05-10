@@ -31,9 +31,9 @@ print('data is filtered')
 
 # The mean of the property attributes that differ per search
 ptprop = pd.pivot_table(new_df, values=['price_usd', 
-        'prop_location_score2', 'prop_log_historical_price', 
+        'prop_location_score2', 'prop_log_historical_price', 'position', 
         'booking_bool', 'click_bool'], index=['prop_id'], aggfunc='mean').reset_index()
-ptprop.columns = ['prop_id', 'mean_booking', 'mean_click', 'mean_price_usd', 
+ptprop.columns = ['prop_id', 'mean_booking', 'mean_click', 'mean_position', 'mean_price_usd', 
                   'mean_prop_location_score2', 'mean_prop_log_historical_price']
 new_df = new_df.merge(ptprop, how='left', on='prop_id')
 del ptprop

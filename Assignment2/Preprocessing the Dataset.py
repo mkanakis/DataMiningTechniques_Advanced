@@ -8,7 +8,6 @@ import pandas as pd
 import numpy as np
 
 df = pd.read_csv('training_set_VU_DM_2014.csv')
-df = df[:5000]
 print('data is loaded')
 
 

@@ -72,12 +72,21 @@ new_df = new_df.drop(['d_srch_booking_window', 'd_srch_length_of_stay'], 1) # re
 new_df.loc[:, 'incheck_date'] = pd.DatetimeIndex(new_df['incheck_date']).date # just take the date not the time
 new_df.loc[:, 'checkout_date'] = pd.DatetimeIndex(new_df['checkout_date']).date # just take the date not the time
 
+new_df.loc[:, 'booking_season'] = pd.DatetimeIndex(new_df['date_time']).quarter
 new_df.loc[:, 'booking_month'] = pd.DatetimeIndex(new_df['date_time']).month
 new_df.loc[:, 'booking_week'] = pd.DatetimeIndex(new_df['date_time']).week
+new_df.loc[:, 'booking_weekday'] = pd.DatetimeIndex(new_df['date_time']).weekday
+new_df.loc[:, 'booking_hour'] = pd.DatetimeIndex(new_df['date_time']).hour
+
+new_df.loc[:, 'incheck_season'] = pd.DatetimeIndex(new_df['incheck_date']).quarter
 new_df.loc[:, 'incheck_month'] = pd.DatetimeIndex(new_df['incheck_date']).month
 new_df.loc[:, 'incheck_week'] = pd.DatetimeIndex(new_df['incheck_date']).week
+new_df.loc[:, 'incheck_weekday'] = pd.DatetimeIndex(new_df['incheck_date']).weekday
+
+new_df.loc[:, 'checkout_season'] = pd.DatetimeIndex(new_df['checkout_date']).quarter
 new_df.loc[:, 'checkout_month'] = pd.DatetimeIndex(new_df['checkout_date']).month
 new_df.loc[:, 'checkout_week'] = pd.DatetimeIndex(new_df['checkout_date']).week
+new_df.loc[:, 'checkout_weekday'] = pd.DatetimeIndex(new_df['checkout_date']).weekday
 
 new_df = new_df.drop(['incheck_date', 'checkout_date', 'date_time'], 1)
 del ptdate

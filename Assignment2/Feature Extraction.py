@@ -53,6 +53,45 @@ del ptid
 print('mean of the property attributes in same search is done')
 
 
+# Add features for the search features. Compare the srch features with the weighted srch features for the properties
+    # when they were booked.
+new_df.loc[:, 'relevance'] = new_df['click_bool'] + 4*new_df['booking_bool']
+
+WEIGHT_OF_RELEVANCE = 40    
+new_df.loc[:,'relevance2'] = (new_df['relevance']*WEIGHT_OF_RELEVANCE) + 1
+
+for column in ['srch_length_of_stay', 'srch_booking_window',
+       'srch_adults_count', 'srch_children_count', 'srch_room_count',
+       'srch_saturday_night_bool']:
+    new_df.loc[:, 'weighted_' + column] = new_df[column] * new_df['relevance2']
+
+pt_srch = pd.pivot_table(new_df, values=['weighted_srch_length_of_stay',
+       'weighted_srch_booking_window', 'weighted_srch_adults_count',
+       'weighted_srch_children_count', 'weighted_srch_room_count',
+       'weighted_srch_saturday_night_bool', 'relevance2'], index=['prop_id'], aggfunc='sum').reset_index()
+for column in ['weighted_srch_length_of_stay', 'weighted_srch_booking_window', 'weighted_srch_adults_count',
+       'weighted_srch_children_count', 'weighted_srch_room_count',
+        'weighted_srch_saturday_night_bool']:
+    pt_srch.loc[:, column] = pt_srch[column]/pt_srch['relevance2']
+pt_srch = pt_srch.drop('relevance2', 1)
+
+new_df = new_df.drop(['weighted_srch_length_of_stay',
+       'weighted_srch_booking_window', 'weighted_srch_adults_count',
+       'weighted_srch_children_count', 'weighted_srch_room_count',
+       'weighted_srch_saturday_night_bool', 'relevance2'],1)
+
+new_df = new_df.merge(pt_srch, how='left', on='prop_id')
+
+for column in ['srch_length_of_stay', 'srch_booking_window', 'srch_adults_count',
+       'srch_children_count', 'srch_room_count',
+        'srch_saturday_night_bool']:
+    weighted = 'weighted_' + column
+    new_var = 'diff_prop_' + column
+    new_df.loc[:, new_var] = abs(new_df[column] - new_df[weighted])
+del pt_srch, column, weighted, new_var, WEIGHT_OF_RELEVANCE
+print('Comparison between srch features and the weighted srch features of the property when booked is done')
+
+
 # Add a incheck and checkout date
 new_df.loc[:, 'date_time'] = pd.to_datetime(new_df['date_time'])
 
@@ -116,6 +155,5 @@ del srch_id, new_var_id, column, mean_prop, new_var_mean
 # Add a relevance feature and remove the click/booking bool
 new_df.loc[:, 'diff_hist_star'] = new_df['prop_starrating'] - new_df['visitor_hist_starrating']
 new_df.loc[:, 'diff_hist_price'] = new_df['price_usd'] - new_df['visitor_hist_adr_usd']
-new_df.loc[:, 'relevance'] = new_df['click_bool'] + 4*new_df['booking_bool']
 new_df = new_df.drop(['click_bool', 'booking_bool'], 1)
 

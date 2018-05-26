@@ -7,7 +7,7 @@
 import numpy as np
 import pandas as pd
 
-df = pd.read_csv(r'C:\Users\MICK\Downloads\Data Mining VU data\Dataset_filled.csv')
+df = pd.read_csv(r'F:\Vu Datamining files\Dataset_filled.csv')
 df = df.drop('Unnamed: 0', 1)
 
 
@@ -166,27 +166,33 @@ test = new_df[new_df['srch_id'].isin(x_test)]
 
 pt = pd.pivot_table(train, values=['click_bool', 'booking_bool'], index=['prop_id'], aggfunc='mean').reset_index()
 pt.columns = ['prop_id', 'mean_booking', 'mean_click']
-
-train = train.merge(pt, how='left', on='prop_id')
 test = test.merge(pt, how='left', on='prop_id')
-
 del pt
+
+pt = pd.pivot_table(test, values=['click_bool', 'booking_bool'], index=['prop_id'], aggfunc='mean').reset_index()
+pt.columns = ['prop_id', 'mean_booking', 'mean_click']
+train = train.merge(pt, how='left', on='prop_id')
+del pt
+
 
 pt = pd.pivot_table(train[train['random_bool'] == 0], values='position', index=['prop_id'], aggfunc='mean').reset_index()
 pt.columns = ['prop_id', 'mean_position']
-
-train = train.merge(pt, how='left', on='prop_id')
 test = test.merge(pt, how='left', on='prop_id')
-
 del pt
 
-
+pt = pd.pivot_table(test[test['random_bool'] == 0], values='position', index=['prop_id'], aggfunc='mean').reset_index()
+pt.columns = ['prop_id', 'mean_position']
+train = train.merge(pt, how='left', on='prop_id')
+del pt
 # In[ ]:
 
 
 test.loc[:, 'mean_booking'] = test['mean_booking'].fillna(test['mean_booking'].mean())
 test.loc[:, 'mean_click'] = test['mean_click'].fillna(test['mean_click'].mean())
 test.loc[:, 'mean_position'] = test['mean_position'].fillna(test['mean_position'].mean())
+
+train.loc[:, 'mean_booking'] = train['mean_booking'].fillna(train['mean_booking'].mean())
+train.loc[:, 'mean_click'] = train['mean_click'].fillna(train['mean_click'].mean())
 train.loc[:, 'mean_position'] = train['mean_position'].fillna(train['mean_position'].mean())
 
 
@@ -250,6 +256,8 @@ del srch_id, true_var_id, abs_var_id, per_var_id
     # when they were booked.
 WEIGHT_OF_RELEVANCE = 50    
 train.loc[:,'relevance2'] = (train['relevance']*WEIGHT_OF_RELEVANCE) + 1
+test.loc[:,'relevance2'] = (test['relevance']*WEIGHT_OF_RELEVANCE) + 1
+
 
 for column in ['srch_length_of_stay', 'srch_booking_window',
        'srch_adults_count', 'srch_children_count', 'srch_room_count',
@@ -270,12 +278,34 @@ train = train.drop(['weighted_srch_length_of_stay',
        'weighted_srch_booking_window', 'weighted_srch_adults_count',
        'weighted_srch_children_count', 'weighted_srch_room_count',
        'weighted_srch_saturday_night_bool', 'relevance2'],1)
+    
+    
+    
+for column in ['srch_length_of_stay', 'srch_booking_window',
+       'srch_adults_count', 'srch_children_count', 'srch_room_count',
+       'srch_saturday_night_bool']:
+    test.loc[:, 'weighted_' + column] = test[column] * test['relevance2']
+
+pt_srch2 = pd.pivot_table(test, values=['weighted_srch_length_of_stay',
+       'weighted_srch_booking_window', 'weighted_srch_adults_count',
+       'weighted_srch_children_count', 'weighted_srch_room_count',
+       'weighted_srch_saturday_night_bool', 'relevance2'], index=['prop_id'], aggfunc='sum').reset_index()
+for column in ['weighted_srch_length_of_stay', 'weighted_srch_booking_window', 'weighted_srch_adults_count',
+       'weighted_srch_children_count', 'weighted_srch_room_count',
+        'weighted_srch_saturday_night_bool']:
+    pt_srch2.loc[:, column] = pt_srch2[column]/pt_srch2['relevance2']
+pt_srch2 = pt_srch2.drop('relevance2', 1)
+
+test = test.drop(['weighted_srch_length_of_stay',
+       'weighted_srch_booking_window', 'weighted_srch_adults_count',
+       'weighted_srch_children_count', 'weighted_srch_room_count',
+       'weighted_srch_saturday_night_bool', 'relevance2'],1)
 
 
 # In[ ]:
 
 
-train = train.merge(pt_srch, how='left', on='prop_id')
+train = train.merge(pt_srch2, how='left', on='prop_id')
 test = test.merge(pt_srch, how='left', on='prop_id')
 
 for column in ['weighted_srch_length_of_stay',
@@ -283,6 +313,8 @@ for column in ['weighted_srch_length_of_stay',
        'weighted_srch_children_count', 'weighted_srch_room_count',
        'weighted_srch_saturday_night_bool']:
     test.loc[:, column] = test[column].fillna(pt_srch[column].mean())
+    train.loc[:, column] = train[column].fillna(pt_srch2[column].mean())
+
 
 for column in ['srch_length_of_stay', 'srch_booking_window', 'srch_adults_count',
        'srch_children_count', 'srch_room_count',
@@ -307,7 +339,8 @@ print('Comparison between srch features and the weighted srch features of the pr
 
 # In[ ]:
 
+train.to_csv(r'F:\Vu Datamining files\Dataset_train.csv')
+test.to_csv(r'F:\Vu Datamining files\Dataset_test.csv')
 
-train.to_csv('F:\Dataset_train.csv')
-test.to_csv('F:\Dataset_test.csv')
-
+complete_set = pd.concat([train, test])
+complete_set.to_csv(r'F:\Vu Datamining files\Vu_Training_dataset.csv', index=False)
